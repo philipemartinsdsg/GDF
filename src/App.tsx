@@ -14,12 +14,12 @@ function Modal({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-        <div className="px-6 py-4 border-b border-mist flex justify-between items-center">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="px-6 py-4 border-b border-mist flex justify-between items-center flex-shrink-0">
           <h3 className="text-lg font-semibold text-midnight">{title}</h3>
           <button onClick={onClose} className="text-silver hover:text-slate text-2xl leading-none">&times;</button>
         </div>
-        <div className="p-6">
+        <div className="overflow-y-auto flex-1 p-6 flex flex-col">
           {children}
         </div>
       </div>
@@ -337,7 +337,8 @@ function BudgetForm({ category, initialAmount, initialItems, initialIsFixed, onS
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <div className="flex-1 space-y-6">
       <div>
         <label className="block text-sm font-medium text-slate mb-1">Orçamento Total para {category.name}</label>
         <div className="relative">
@@ -468,7 +469,8 @@ function BudgetForm({ category, initialAmount, initialItems, initialIsFixed, onS
         </div>
       </div>
 
-      <div className="pt-2 flex justify-end space-x-3">
+      </div>
+      <div className="pt-4 mt-2 border-t border-mist flex justify-end space-x-3 flex-shrink-0">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate bg-white border border-silver rounded-lg hover:bg-snow">Cancelar</button>
         <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-teal rounded-lg hover:bg-teal-dark">Salvar</button>
       </div>
@@ -710,38 +712,40 @@ export default function App() {
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
   return (
-    <div className="min-h-screen bg-snow font-sans text-midnight pb-20">
+    <div className="min-h-screen bg-snow font-sans text-midnight pb-20 overflow-x-hidden">
       {/* Header */}
       <header className="bg-white border-b border-mist sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-teal">
-            <Wallet className="w-6 h-6" />
-            <span className="font-semibold text-lg hidden sm:block">Finanças pessoais</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex bg-mist p-1 rounded-lg mr-2">
-              <button 
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="flex items-center justify-between h-12">
+            <div className="flex items-center space-x-2 text-teal">
+              <Wallet className="w-5 h-5" />
+              <span className="font-semibold hidden sm:block">Finanças pessoais</span>
+            </div>
+            <div className="flex bg-mist p-1 rounded-lg">
+              <button
                 onClick={() => setActiveTab('month')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'month' ? 'bg-white text-midnight shadow-sm' : 'text-silver hover:text-slate'}`}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'month' ? 'bg-white text-midnight shadow-sm' : 'text-silver hover:text-slate'}`}
               >
                 Mês Atual
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('overview')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'overview' ? 'bg-white text-midnight shadow-sm' : 'text-silver hover:text-slate'}`}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${activeTab === 'overview' ? 'bg-white text-midnight shadow-sm' : 'text-silver hover:text-slate'}`}
               >
                 Visão Geral
               </button>
             </div>
-            <button onClick={handlePrevMonth} className="p-2 rounded-full hover:bg-mist transition-colors">
-              <ChevronLeft className="w-5 h-5 text-slate" />
+          </div>
+          <div className="flex items-center justify-center gap-3 pb-2">
+            <button onClick={handlePrevMonth} className="p-1.5 rounded-full hover:bg-mist transition-colors">
+              <ChevronLeft className="w-4 h-4 text-slate" />
             </button>
-            <div className="flex items-center space-x-2 min-w-[140px] justify-center">
+            <div className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-silver" />
-              <span className="font-medium text-midnight">{formatMonth(currentMonth)}</span>
+              <span className="font-medium text-midnight text-sm">{formatMonth(currentMonth)}</span>
             </div>
-            <button onClick={handleNextMonth} className="p-2 rounded-full hover:bg-mist transition-colors">
-              <ChevronRight className="w-5 h-5 text-slate" />
+            <button onClick={handleNextMonth} className="p-1.5 rounded-full hover:bg-mist transition-colors">
+              <ChevronRight className="w-4 h-4 text-slate" />
             </button>
           </div>
         </div>
