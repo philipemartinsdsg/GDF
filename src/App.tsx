@@ -678,8 +678,24 @@ function OverviewTab({ state, currentMonth }: { state: AppState, currentMonth: s
 }
 
 export default function App() {
-  const { state, updateIncome, updateBudget, addCategory, updateCategory, addExpense, updateExpense, deleteExpense, updateCategoryFixedState } = useFinanceStore();
-  
+  const { state, isLoading, error, updateIncome, updateBudget, addCategory, updateCategory, addExpense, updateExpense, deleteExpense, updateCategoryFixedState } = useFinanceStore();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-snow flex items-center justify-center">
+        <div className="text-silver text-sm">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-snow flex items-center justify-center">
+        <div className="text-red-500 text-sm">Erro ao carregar dados: {error}</div>
+      </div>
+    );
+  }
+
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
