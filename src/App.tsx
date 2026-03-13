@@ -680,22 +680,6 @@ function OverviewTab({ state, currentMonth }: { state: AppState, currentMonth: s
 export default function App() {
   const { state, isLoading, error, updateIncome, updateBudget, addCategory, updateCategory, addExpense, updateExpense, deleteExpense, updateCategoryFixedState } = useFinanceStore();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-snow flex items-center justify-center">
-        <div className="text-silver text-sm">Carregando...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-snow flex items-center justify-center">
-        <div className="text-red-500 text-sm">Erro ao carregar dados: {error}</div>
-      </div>
-    );
-  }
-
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -726,6 +710,22 @@ export default function App() {
 
   const handlePrevMonth = () => setCurrentMonth(addMonths(currentMonth, -1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-snow flex items-center justify-center">
+        <div className="text-silver text-sm">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-snow flex items-center justify-center">
+        <div className="text-red-500 text-sm">Erro ao carregar dados: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-snow font-sans text-midnight pb-20 overflow-x-hidden">
