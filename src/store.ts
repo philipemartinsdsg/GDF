@@ -1,86 +1,29 @@
 import { useState, useEffect } from 'react';
 import { AppState, Category, Expense, BudgetItem } from './types';
+import {
+  fetchAllState,
+  dbUpsertIncome,
+  dbUpsertBudget,
+  dbUpsertFixedCategory,
+  dbUpsertCategory,
+  dbInsertExpense,
+  dbUpdateExpense,
+  dbDeleteExpense,
+} from './lib/db';
 
-const STORAGE_KEY = 'finance_app_state_v2';
-
-const defaultCategories: Category[] = [
-  { id: 'cat-alimentacao', name: 'Alimentação', color: '#10b981', isFixed: true },
-  { id: 'cat-assinaturas', name: 'Assinaturas', color: '#3b82f6', isFixed: true },
-  { id: 'cat-carro', name: 'Carro', color: '#f59e0b', isFixed: true },
-  { id: 'cat-casa', name: 'Casa', color: '#ef4444', isFixed: true },
-  { id: 'cat-consultorio', name: 'Consultório', color: '#8b5cf6', isFixed: true },
-  { id: 'cat-eventuais', name: 'Eventuais', color: '#6b7280', isFixed: true },
-  { id: 'cat-joca', name: 'Joca', color: '#ec4899', isFixed: true },
-  { id: 'cat-lazer', name: 'Lazer', color: '#f97316', isFixed: true },
-  { id: 'cat-mesadas', name: 'Mesadas', color: '#06b6d4', isFixed: true },
-  { id: 'cat-saude', name: 'Saúde', color: '#14b8a6', isFixed: true },
-  { id: 'cat-escape', name: 'Zona de escape', color: '#4b5563', isFixed: true },
-];
-
-const defaultBudgetItems: Record<string, BudgetItem[]> = {
-  'cat-alimentacao': [
-    { id: 'item-supermercado', name: 'Supermercado', amount: 0, isFixed: true },
-    { id: 'item-acougue', name: 'Açougue', amount: 0, isFixed: true },
-  ],
-  'cat-assinaturas': [
-    { id: 'item-netflix', name: 'Netflix', amount: 0, isFixed: true },
-    { id: 'item-globoplay', name: 'Globoplay', amount: 0, isFixed: true },
-    { id: 'item-ia', name: 'IA', amount: 0, isFixed: true },
-    { id: 'item-spotify', name: 'Spotify', amount: 0, isFixed: true },
-    { id: 'item-apple', name: 'Apple', amount: 0, isFixed: true },
-  ],
-  'cat-carro': [
-    { id: 'item-gasolina', name: 'Gasolina', amount: 0, isFixed: true },
-    { id: 'item-seguro', name: 'Seguro', amount: 0, isFixed: true },
-  ],
-  'cat-casa': [
-    { id: 'item-financiamento', name: 'Financiamento', amount: 0, isFixed: true },
-    { id: 'item-manutencao', name: 'Manutenção', amount: 0, isFixed: true },
-  ],
-  'cat-consultorio': [
-    { id: 'item-aluguel', name: 'Aluguel', amount: 0, isFixed: true },
-    { id: 'item-contabilidade', name: 'Contabilidade', amount: 0, isFixed: true },
-  ],
-  'cat-lazer': [
-    { id: 'item-programas', name: 'Programas', amount: 0, isFixed: true },
-    { id: 'item-comida', name: 'Comida', amount: 0, isFixed: true },
-  ],
-  'cat-mesadas': [
-    { id: 'item-fernanda', name: 'Fernanda', amount: 0, isFixed: true },
-    { id: 'item-philipe', name: 'Philipe', amount: 0, isFixed: true },
-  ],
-  'cat-saude': [
-    { id: 'item-planos', name: 'Planos de saúde', amount: 0, isFixed: true },
-    { id: 'item-farmacia', name: 'Farmácia', amount: 0, isFixed: true },
-  ],
-};
-
-const currentMonth = new Date().toISOString().substring(0, 7);
-
-const defaultState: AppState = {
-  categories: defaultCategories,
-  expenses: [],
-  months: {
-    [currentMonth]: {
-      month: currentMonth,
-      income: 0,
-      budgets: Object.fromEntries(defaultCategories.map(c => [c.id, 0])),
-      budgetItems: defaultBudgetItems,
-      fixedBudgets: Object.fromEntries(defaultCategories.map(c => [c.id, true])),
-      fixedCategories: Object.fromEntries(defaultCategories.map(c => [c.id, true])),
-    }
-  },
-};
+const emptyState: AppState = { categories: [], expenses: [], months: {} };
 
 export function useFinanceStore() {
-  const [state, setState] = useState<AppState>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : defaultState;
-  });
+  const [state, setState] = useState<AppState>(emptyState);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    fetchAllState()
+      .then(setState)
+      .catch(e => setError(e.message ?? 'Failed to load data'))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const updateIncome = (month: string, income: number) => {
     setState(s => ({
@@ -88,34 +31,28 @@ export function useFinanceStore() {
       months: {
         ...s.months,
         [month]: {
-          ...(s.months[month] || { month, income: 0, budgets: {} }),
+          ...(s.months[month] || { month, income: 0, budgets: {}, budgetItems: {}, fixedBudgets: {}, fixedCategories: {} }),
           income,
         }
       }
     }));
+    dbUpsertIncome(month, income);
   };
 
   const updateBudget = (month: string, categoryId: string, amount: number, items: BudgetItem[], isFixedBudget: boolean) => {
     setState(s => {
       const monthData = s.months[month] || { month, income: 0, budgets: {}, budgetItems: {}, fixedBudgets: {}, fixedCategories: {} };
+      const isFixedCategory = s.months[month]?.fixedCategories[categoryId] ?? true;
+      dbUpsertBudget(month, categoryId, amount, items, isFixedBudget, isFixedCategory);
       return {
         ...s,
         months: {
           ...s.months,
           [month]: {
             ...monthData,
-            budgets: {
-              ...monthData.budgets,
-              [categoryId]: amount,
-            },
-            budgetItems: {
-              ...monthData.budgetItems,
-              [categoryId]: items,
-            },
-            fixedBudgets: {
-              ...monthData.fixedBudgets,
-              [categoryId]: isFixedBudget,
-            }
+            budgets: { ...monthData.budgets, [categoryId]: amount },
+            budgetItems: { ...monthData.budgetItems, [categoryId]: items },
+            fixedBudgets: { ...monthData.fixedBudgets, [categoryId]: isFixedBudget },
           }
         }
       };
@@ -125,16 +62,14 @@ export function useFinanceStore() {
   const updateCategoryFixedState = (month: string, categoryId: string, isFixed: boolean) => {
     setState(s => {
       const monthData = s.months[month] || { month, income: 0, budgets: {}, budgetItems: {}, fixedBudgets: {}, fixedCategories: {} };
+      dbUpsertFixedCategory(month, categoryId, isFixed, s.months);
       return {
         ...s,
         months: {
           ...s.months,
           [month]: {
             ...monthData,
-            fixedCategories: {
-              ...monthData.fixedCategories,
-              [categoryId]: isFixed,
-            }
+            fixedCategories: { ...monthData.fixedCategories, [categoryId]: isFixed },
           }
         }
       };
@@ -143,17 +78,23 @@ export function useFinanceStore() {
 
   const addCategory = (category: Category) => {
     setState(s => ({ ...s, categories: [...s.categories, category] }));
+    dbUpsertCategory(category);
   };
 
   const updateCategory = (id: string, updates: Partial<Category>) => {
-    setState(s => ({
-      ...s,
-      categories: s.categories.map(c => c.id === id ? { ...c, ...updates } : c)
-    }));
+    setState(s => {
+      const cat = s.categories.find(c => c.id === id);
+      if (cat) dbUpsertCategory({ ...cat, ...updates });
+      return {
+        ...s,
+        categories: s.categories.map(c => c.id === id ? { ...c, ...updates } : c)
+      };
+    });
   };
 
   const addExpense = (expense: Expense) => {
     setState(s => ({ ...s, expenses: [...s.expenses, expense] }));
+    dbInsertExpense(expense);
   };
 
   const updateExpense = (id: string, updates: Partial<Expense>) => {
@@ -161,17 +102,18 @@ export function useFinanceStore() {
       ...s,
       expenses: s.expenses.map(e => e.id === id ? { ...e, ...updates } : e)
     }));
+    dbUpdateExpense(id, updates);
   };
 
   const deleteExpense = (id: string) => {
-    setState(s => ({
-      ...s,
-      expenses: s.expenses.filter(e => e.id !== id)
-    }));
+    setState(s => ({ ...s, expenses: s.expenses.filter(e => e.id !== id) }));
+    dbDeleteExpense(id);
   };
 
   return {
     state,
+    isLoading,
+    error,
     updateIncome,
     updateBudget,
     addCategory,
